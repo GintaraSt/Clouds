@@ -328,9 +328,14 @@ Shader "Hidden/Clouds"
                     dstTravelled += stepSize;
                 }
 
+
+                // GS TEMP
+                float3 atmosphereCol = float3(1, 0.3, 0.3);
+
+
                 // Add clouds to background
                 float3 backgroundCol = tex2D(_MainTex,i.uv);
-                float3 cloudCol = lightEnergy * _LightColor0;
+                float3 cloudCol = lightEnergy * _LightColor0 * atmosphereCol;
                 float3 col = backgroundCol * transmittance + cloudCol;
                 return float4(col,0);
 

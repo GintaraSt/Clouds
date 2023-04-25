@@ -310,16 +310,29 @@ Shader "Hidden/Clouds"
                 
                 
                 // March through volume:
-                const float stepSize = 11;
+                const float initialStepSize = 10;
+                const float preciseStepSize = 10;
+                float stepSize = initialStepSize;// initialStepSize; // This affects performance a lot, we need to use high step until we reach the cloud and then low one once we reach it
                 float transmittance = 1;
                 float3 lightEnergy = 0;
 
-                while (dstTravelled < dstLimit) {
+                bool isFirstHit = true;
+                bool isInCloud = false;
+                while (dstTravelled < dstLimit)
+                {
                     rayPos = entryPoint + rayDir * dstTravelled;
                     float density = sampleDensity(rayPos);
                     
-                    if (density > 0) {
-
+                    if (density > 0)
+                    {
+                        ////isInCloud = true;
+                        //if (isFirstHit)
+                        //{
+                        //    dstTravelled -= stepSize;
+                        //    stepSize = preciseStepSize;
+                        //    isFirstHit = false;
+                        //    isInCloud = true;
+                        //}
                         float lightTransmittance = lightmarch(rayPos);
                         lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
                         transmittance *= exp(-density * stepSize * lightAbsorptionThroughCloud);
@@ -329,6 +342,10 @@ Shader "Hidden/Clouds"
                             break;
                         }
                     }
+                    //else if (isInCloud)
+                    //{
+                    //    break; // we exited cloud already
+                    //}
                     
                     dstTravelled += stepSize;
                 }
@@ -345,8 +362,11 @@ Shader "Hidden/Clouds"
                 float focusedEyeCos = pow(saturate(cosAngle), params.x);
                 float sun = saturate(hg(focusedEyeCos, .9995)) * transmittance;
                 
+                // TODO: replace with actual atmosphere color:
+                float3 atmosphereCol = float3(1, 0.7, 0.5);
+
                 // Add clouds
-                float3 cloudCol = lightEnergy * _LightColor0;
+                float3 cloudCol = lightEnergy * _LightColor0 * atmosphereCol;
                 float3 col = backgroundCol * transmittance + cloudCol;
                 col = saturate(col) * (1-sun) + _LightColor0*sun;
                 return float4(col,0);
