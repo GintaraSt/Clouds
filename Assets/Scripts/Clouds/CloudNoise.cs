@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class CloudNoise : MonoBehaviour {
@@ -14,15 +13,12 @@ public class CloudNoise : MonoBehaviour {
 
     public Vector3 noiseTestParams;
 
-    public SimplexSettings simplexSettings;
-    public WorleySettings worleySettings;
     [HideInInspector]
     public bool calculateWorley = true;
 
     [Header ("Detail Noise")]
     public int detailNoiseResolution = 32;
     public RenderTexture detailNoiseTexture;
-    public WorleySettings detailWorleySettings;
 
     bool updateNoise = true;
     List<ComputeBuffer> buffersToRelease;
@@ -48,9 +44,6 @@ public class CloudNoise : MonoBehaviour {
             noiseCompute.SetTexture (0, "Result", noiseTexture);
             var testBuffer = CreateBuffer (new int[numBaseNoiseThreadGroups], sizeof (int), "testBuffer");
 
-            UpdateSimplex ();
-            UpdateWorley (worleySettings);
-
             mainTimer.Stop ();
             computeTimer.Start ();
 
@@ -60,7 +53,6 @@ public class CloudNoise : MonoBehaviour {
             }
 
             // Dispatch detail noise
-            UpdateWorley (detailWorleySettings);
             noiseCompute.SetInt ("resolution", detailNoiseResolution);
             noiseCompute.SetTexture (0, "Result", detailNoiseTexture);
             noiseCompute.Dispatch (0, numDetailNoiseThreadGroups, numDetailNoiseThreadGroups, numDetailNoiseThreadGroups);
@@ -81,33 +73,6 @@ public class CloudNoise : MonoBehaviour {
                 buffer.Release ();
             }
         }
-    }
-
-    void UpdateSimplex () {
-        var prng = new System.Random (simplexSettings.seed);
-        CreateBuffer (new SimplexSettings[] { simplexSettings }, SimplexSettings.Size, "simplexSettingsBuffer");
-        CreateRandomOffsetsBuffer (simplexSettings.numLayers, prng, "simplexOffsets");
-        noiseCompute.SetInt ("resolution", baseResolution);
-    }
-
-    void UpdateWorley (WorleySettings settings) {
-        var prng = new System.Random (settings.seed);
-
-        int totalPointCount = 0;
-        float frequency = 1;
-        for (int i = 0; i < settings.numLayers; i++) {
-            totalPointCount += Mathf.FloorToInt (settings.numPoints * frequency);
-            frequency *= settings.lacunarity;
-        }
-
-        Vector3[] points = new Vector3[totalPointCount];
-
-        for (int i = 0; i < points.Length; i++) {
-            points[i] = new Vector3 ((float) prng.NextDouble (), (float) prng.NextDouble (), (float) prng.NextDouble ());
-        }
-
-        CreateBuffer (points, sizeof (float) * 3, "points");
-        CreateBuffer (new WorleySettings[] { settings }, WorleySettings.Size, "worleySettingsBuffer");
     }
 
     // Create buffer of random 3d vectors
