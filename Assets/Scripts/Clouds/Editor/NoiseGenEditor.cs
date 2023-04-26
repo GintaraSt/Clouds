@@ -17,7 +17,7 @@ public class NoiseGenEditor : Editor {
             noise.ManualUpdate ();
             EditorApplication.QueuePlayerLoopUpdate ();
         }
-
+        GUILayout.Label("Make sure to save all channels (each save only affects the active one.");
         if (GUILayout.Button ("Save")) {
             Save ();
         }
