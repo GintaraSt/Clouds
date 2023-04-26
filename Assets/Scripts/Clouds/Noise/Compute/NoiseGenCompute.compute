@@ -129,7 +129,7 @@ void CSNormalize (uint3 id : SV_DispatchThreadID)
     float minVal = (float)minMax[0]/minMaxAccuracy;
     float maxVal = (float)minMax[1]/minMaxAccuracy;
     float4 normalizedVal = (Result[id]-minVal)/(maxVal-minVal);
-
+    //haha
     Result[id] = Result[id] * (1-channelMask) + normalizedVal * channelMask;
 
 }
