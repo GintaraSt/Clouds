@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
 [CustomEditor (typeof (NoiseGenerator))]
@@ -17,7 +14,7 @@ public class NoiseGenEditor : Editor {
             noise.ManualUpdate ();
             EditorApplication.QueuePlayerLoopUpdate ();
         }
-        GUILayout.Label("Make sure to save all channels (each save only affects the active one.");
+        GUILayout.Label("Make sure to update all channels if resolution changes (each update only affects the active one.");
         if (GUILayout.Button ("Save")) {
             Save ();
         }
