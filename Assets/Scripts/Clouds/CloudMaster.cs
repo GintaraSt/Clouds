@@ -48,10 +48,6 @@ public class CloudMaster : MonoBehaviour {
     public float baseSpeed = 1;
     public float detailSpeed = 2;
 
-    [Header (headerDecoration + "Sky" + headerDecoration)]
-    public Color colA;
-    public Color colB;
-
     // Internal
     [HideInInspector]
     public Material material;
@@ -121,9 +117,6 @@ public class CloudMaster : MonoBehaviour {
 
         // Set debug params
         SetDebugParams ();
-
-        material.SetColor ("colA", colA);
-        material.SetColor ("colB", colB);
 
         // Bit does the following:
         // - sets _MainTex property on material to the source texture
