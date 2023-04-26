@@ -268,19 +268,19 @@ Shader "Hidden/Clouds"
           
             float4 frag (v2f i) : SV_Target
             {
-                #if DEBUG_MODE == 1
-                if (debugViewMode != 0) {
-                    float width = _ScreenParams.x;
-                    float height =_ScreenParams.y;
-                    float minDim = min(width, height);
-                    float x = i.uv.x * width;
-                    float y = (1-i.uv.y) * height;
+                //#if DEBUG_MODE == 1
+                //if (debugViewMode != 0) {
+                //    float width = _ScreenParams.x;
+                //    float height =_ScreenParams.y;
+                //    float minDim = min(width, height);
+                //    float x = i.uv.x * width;
+                //    float y = (1-i.uv.y) * height;
 
-                    if (x < minDim*viewerSize && y < minDim*viewerSize) {
-                        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
-                    }
-                }
-                #endif
+                //    if (x < minDim*viewerSize && y < minDim*viewerSize) {
+                //        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
+                //    }
+                //}
+                //#endif
                 
                 // Create ray
                 float3 rayPos = _WorldSpaceCameraPos;
@@ -290,6 +290,8 @@ Shader "Hidden/Clouds"
                 // Depth and cloud container intersection info:
                 float nonlin_depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
                 float depth = LinearEyeDepth(nonlin_depth) * viewLength;
+                int cloudsStart = 100;
+                int cloudsEnd = 300;
                 float2 rayToContainerInfo = rayBoxDst(boundsMin, boundsMax, rayPos, 1/rayDir);
                 float dstToBox = rayToContainerInfo.x;
                 float dstInsideBox = rayToContainerInfo.y;
@@ -310,14 +312,10 @@ Shader "Hidden/Clouds"
                 
                 
                 // March through volume:
-                const float initialStepSize = 10;
-                const float preciseStepSize = 10;
-                float stepSize = initialStepSize;// initialStepSize; // This affects performance a lot, we need to use high step until we reach the cloud and then low one once we reach it
+                const float stepSize = 10;
                 float transmittance = 1;
                 float3 lightEnergy = 0;
 
-                bool isFirstHit = true;
-                bool isInCloud = false;
                 while (dstTravelled < dstLimit)
                 {
                     rayPos = entryPoint + rayDir * dstTravelled;
@@ -325,14 +323,6 @@ Shader "Hidden/Clouds"
                     
                     if (density > 0)
                     {
-                        ////isInCloud = true;
-                        //if (isFirstHit)
-                        //{
-                        //    dstTravelled -= stepSize;
-                        //    stepSize = preciseStepSize;
-                        //    isFirstHit = false;
-                        //    isInCloud = true;
-                        //}
                         float lightTransmittance = lightmarch(rayPos);
                         lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
                         transmittance *= exp(-density * stepSize * lightAbsorptionThroughCloud);
@@ -342,10 +332,6 @@ Shader "Hidden/Clouds"
                             break;
                         }
                     }
-                    //else if (isInCloud)
-                    //{
-                    //    break; // we exited cloud already
-                    //}
                     
                     dstTravelled += stepSize;
                 }
