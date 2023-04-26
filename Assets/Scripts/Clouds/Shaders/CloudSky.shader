@@ -83,9 +83,6 @@ Shader "Hidden/Clouds"
             float lightAbsorptionTowardSun;
             float lightAbsorptionThroughCloud;
             float darknessThreshold;
-            float4 _LightColor0;
-            float4 colA;
-            float4 colB;
 
             // Animation settings
             float timeScale;
@@ -336,9 +333,10 @@ Shader "Hidden/Clouds"
                 float sun = saturate(hg(focusedEyeCos, .9995)) * transmittance;
                 
                 // Add clouds
-                float3 cloudCol = lightEnergy * _LightColor0;
+                float3 LightColor = float3(1, 0.8, 0.7); // Replace this with color calculated by atmosphere
+                float3 cloudCol = lightEnergy * LightColor;
                 float3 col = backgroundCol * transmittance + cloudCol;
-                col = saturate(col) * (1-sun) + _LightColor0*sun;
+                col = saturate(col) * (1-sun) + LightColor * sun;
                 return float4(col,0);
             }
             ENDCG
