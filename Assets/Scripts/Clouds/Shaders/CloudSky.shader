@@ -235,53 +235,9 @@ Shader "Hidden/Clouds"
                 float clampedTransmittance = darknessThreshold + transmittance * (1-darknessThreshold);
                 return clampedTransmittance;
             }
-
-            float4 debugDrawNoise(float2 uv) {
-
-                float4 channels = 0;
-                float3 samplePos = float3(uv.x,uv.y, debugNoiseSliceDepth);
-
-                if (debugViewMode == 1) {
-                    channels = NoiseTex.SampleLevel(samplerNoiseTex, samplePos, 0);
-                }
-                else if (debugViewMode == 2) {
-                    channels = DetailNoiseTex.SampleLevel(samplerDetailNoiseTex, samplePos, 0);
-                }
-                else if (debugViewMode == 3) {
-                    channels = WeatherMap.SampleLevel(samplerWeatherMap, samplePos.xy, 0);
-                }
-
-                if (debugShowAllChannels) {
-                    return channels;
-                }
-                else {
-                    float4 maskedChannels = (channels*debugChannelWeight);
-                    if (debugGreyscale || debugChannelWeight.w == 1) {
-                        return dot(maskedChannels,1);
-                    }
-                    else {
-                        return maskedChannels;
-                    }
-                }
-            }
-
           
             float4 frag (v2f i) : SV_Target
-            {
-                //#if DEBUG_MODE == 1
-                //if (debugViewMode != 0) {
-                //    float width = _ScreenParams.x;
-                //    float height =_ScreenParams.y;
-                //    float minDim = min(width, height);
-                //    float x = i.uv.x * width;
-                //    float y = (1-i.uv.y) * height;
-
-                //    if (x < minDim*viewerSize && y < minDim*viewerSize) {
-                //        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
-                //    }
-                //}
-                //#endif
-                
+            { 
                 // Create ray
                 float3 rayPos = _WorldSpaceCameraPos;
                 float viewLength = length(i.viewVector);
@@ -292,6 +248,8 @@ Shader "Hidden/Clouds"
                 float depth = LinearEyeDepth(nonlin_depth) * viewLength;
                 int cloudsStart = 100;
                 int cloudsEnd = 300;
+                float3 planetCentre = float3(0, 0, 0);
+                // get dir from center
                 float2 rayToContainerInfo = rayBoxDst(boundsMin, boundsMax, rayPos, 1/rayDir);
                 float dstToBox = rayToContainerInfo.x;
                 float dstInsideBox = rayToContainerInfo.y;
