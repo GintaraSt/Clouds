@@ -220,7 +220,7 @@ Shader "Hidden/Clouds"
                 float dstInsideBox = rayBoxDst(boundsMin, boundsMax, p, 1/dirToLight).y;
                 
                 float transmittance = 1;
-                float stepSize = dstInsideBox/numStepsLight;
+                float stepSize = dstInsideBox/numStepsLight; // making this smaller helps improve perf
                 p += dirToLight * stepSize * .5;
                 float totalDensity = 0;
 
@@ -270,7 +270,7 @@ Shader "Hidden/Clouds"
                 
                 
                 // March through volume:
-                const float stepSize = 10;
+                const float stepSize = 20;
                 float transmittance = 1;
                 float3 lightEnergy = 0;
 
