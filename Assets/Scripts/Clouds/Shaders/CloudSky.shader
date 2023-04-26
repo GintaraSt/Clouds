@@ -49,12 +49,10 @@ Shader "Hidden/Clouds"
             Texture3D<float4> NoiseTex;
             Texture3D<float4> DetailNoiseTex;
             Texture2D<float4> WeatherMap;
-            Texture2D<float4> BlueNoise;
             
             SamplerState samplerNoiseTex;
             SamplerState samplerDetailNoiseTex;
             SamplerState samplerWeatherMap;
-            SamplerState samplerBlueNoise;
 
             sampler2D _MainTex;
             sampler2D _CameraDepthTexture;
@@ -298,24 +296,19 @@ Shader "Hidden/Clouds"
 
                 // point of intersection with the cloud container
                 float3 entryPoint = rayPos + rayDir * dstToBox;
-
-                // random starting offset (makes low-res results noisy rather than jagged/glitchy, which is nicer)
-                float randomOffset = BlueNoise.SampleLevel(samplerBlueNoise, squareUV(i.uv*3), 0);
-                randomOffset *= rayOffsetStrength;
                 
                 // Phase function makes clouds brighter around sun
                 float cosAngle = dot(rayDir, _WorldSpaceLightPos0.xyz);
                 float phaseVal = phase(cosAngle);
 
-                float dstTravelled = randomOffset;
                 float dstLimit = min(depth-dstToBox, dstInsideBox);
-                
                 
                 // March through volume:
                 const float stepSize = 20;
                 float transmittance = 1;
                 float3 lightEnergy = 0;
 
+                float dstTravelled = 0;
                 while (dstTravelled < dstLimit)
                 {
                     rayPos = entryPoint + rayDir * dstTravelled;

@@ -13,7 +13,6 @@ public class CloudMaster : MonoBehaviour {
     [Header ("March settings" + headerDecoration)]
     public int numStepsLight = 8;
     public float rayOffsetStrength;
-    public Texture2D blueNoise;
 
     [Header (headerDecoration + "Base Shape" + headerDecoration)]
     public float cloudScale = 1;
@@ -79,7 +78,6 @@ public class CloudMaster : MonoBehaviour {
 
         material.SetTexture ("NoiseTex", noise.shapeTexture);
         material.SetTexture ("DetailNoiseTex", noise.detailTexture);
-        material.SetTexture ("BlueNoise", blueNoise);
 
         // Weathermap
         var weatherMapGen = FindObjectOfType<WeatherMap> ();
