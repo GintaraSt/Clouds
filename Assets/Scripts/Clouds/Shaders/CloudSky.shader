@@ -268,19 +268,19 @@ Shader "Hidden/Clouds"
           
             float4 frag (v2f i) : SV_Target
             {
-                //#if DEBUG_MODE == 1
-                //if (debugViewMode != 0) {
-                //    float width = _ScreenParams.x;
-                //    float height =_ScreenParams.y;
-                //    float minDim = min(width, height);
-                //    float x = i.uv.x * width;
-                //    float y = (1-i.uv.y) * height;
+                #if DEBUG_MODE == 1
+                if (debugViewMode != 0) {
+                    float width = _ScreenParams.x;
+                    float height =_ScreenParams.y;
+                    float minDim = min(width, height);
+                    float x = i.uv.x * width;
+                    float y = (1-i.uv.y) * height;
 
-                //    if (x < minDim*viewerSize && y < minDim*viewerSize) {
-                //        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
-                //    }
-                //}
-                //#endif
+                    if (x < minDim*viewerSize && y < minDim*viewerSize) {
+                        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
+                    }
+                }
+                #endif
                 
                 // Create ray
                 float3 rayPos = _WorldSpaceCameraPos;
