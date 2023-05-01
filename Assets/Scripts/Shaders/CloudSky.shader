@@ -346,10 +346,7 @@ Shader "Hidden/Clouds"
                 float3 col = backgroundCol * transmittance + cloudCol;
                 col = saturate(col) * (1-sun) + LightColor * sun;
 
-                //return float4(backgroundCol, 0) * float4(1, 0.8, 0.8, 0);
                 return float4(col, 0);
-
-                //return tex2D(_MainTex, i.uv);
             }
             ENDCG
         }

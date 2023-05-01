@@ -77,14 +77,6 @@ public class CloudsSettings : ScriptableObject
             material.SetTexture("NoiseTex", _shapeTexture);
             material.SetTexture("DetailNoiseTex", _detailTexture);
 
-            //// Weathermap
-            //var weatherMapGen = FindObjectOfType<WeatherMap>();
-            //if (!Application.isPlaying)
-            //{
-            //    weatherMapGen.UpdateMap();
-            //}
-            //material.SetTexture("WeatherMap", weatherMapGen.weatherMap);
-
             material.SetFloat("scale", cloudScale);
             material.SetFloat("densityMultiplier", densityMultiplier);
             material.SetFloat("densityOffset", densityOffset);
