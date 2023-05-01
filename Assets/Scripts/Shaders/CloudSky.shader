@@ -27,327 +27,309 @@ Shader "Hidden/Clouds"
             #include "UnityCG.cginc"
             #include "Assets/Scripts/Shaders/CloudDebug.cginc"
 
-            struct appdata {
-                    float4 position : POSITION;
-                    float4 uv : TEXCOORD0;
-            };
+			// vertex input: position, UV
+			struct appdata {
+				float4 vertex : POSITION;
+				float2 uv : TEXCOORD0;
+			};
 
-            struct v2f {
-                    float4 pos : SV_POSITION;
-                    float2 uv : TEXCOORD0;
-                    float3 viewVector : TEXCOORD1;
-                    float4 worldSpacePos : TEXCOORD2;
-            };
+			struct v2f {
+				float4 pos : SV_POSITION;
+				float2 uv : TEXCOORD0;
+				float3 viewVector : TEXCOORD1;
+			};
 
-            v2f vert(appdata v) {
-                    v2f output;
-                    output.pos = UnityObjectToClipPos(v.position);
-                    output.uv = v.uv;
-                    // Camera space matches OpenGL convention where cam forward is -z. In unity forward is positive z.
-                    // (https://docs.unity3d.com/ScriptReference/Camera-cameraToWorldMatrix.html)
-                    float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv.xy * 2 - 1, 0, -1));
-                    output.viewVector = mul(unity_CameraToWorld, float4(viewVector,0));
+			v2f vert(appdata v) {
+				v2f output;
+				output.pos = UnityObjectToClipPos(v.vertex);
+				output.uv = v.uv;
+				// Camera space matches OpenGL convention where cam forward is -z. In unity forward is positive z.
+				// (https://docs.unity3d.com/ScriptReference/Camera-cameraToWorldMatrix.html)
+				float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv * 2 - 1, 0, -1));
+				output.viewVector = mul(unity_CameraToWorld, float4(viewVector,0));
+				return output;
+			}
 
-                    // world position of vertex
-                    output.worldSpacePos = mul(unity_ObjectToWorld, v.position);
-                    return output;
-            }
+			// Textures
+			Texture3D<float4> NoiseTex;
+			Texture3D<float4> DetailNoiseTex;
 
-            // Textures
-            Texture3D<float4> NoiseTex;
-            Texture3D<float4> DetailNoiseTex;
-            //Texture2D<float4> WeatherMap;
-            
-            SamplerState samplerNoiseTex;
-            SamplerState samplerDetailNoiseTex;
-            //SamplerState samplerWeatherMap;
+			SamplerState samplerNoiseTex;
+			SamplerState samplerDetailNoiseTex;
 
-            sampler2D _MainTex;
-            sampler2D _CameraDepthTexture;
+			sampler2D _MainTex;
+			sampler2D _CameraDepthTexture;
 
-            // Shape settings
-            float4 params;
-            int3 mapSize;
-            float densityMultiplier;
-            float densityOffset;
-            float scale;
-            float detailNoiseScale;
-            float detailNoiseWeight;
-            float3 detailWeights;
-            float4 shapeNoiseWeights;
-            float4 phaseParams;
+			// Shape settings
+			float4 params;
+			float densityMultiplier;
+			float densityOffset;
+			float scale;
+			float detailNoiseScale;
+			float detailNoiseWeight;
+			float3 detailWeights;
+			float4 shapeNoiseWeights;
+			float4 phaseParams;
 
-            // March settings
-            int numStepsLight;
-            float rayOffsetStrength;
+			float innerShellRadius;
+			float outerShellRadius;
 
-            float3 boundsMin;
-            float3 boundsMax;
+			// Anim settings
+			float animSpeed;
 
-            float3 shapeOffset;
-            float3 detailOffset;
+			// March settings
+			int numStepsLight;
+			int numStepsMain;
+			float minMainStepSize;
+			float rayOffsetStrength;
 
-            // Light settings
-            float lightAbsorptionTowardSun;
-            float lightAbsorptionThroughCloud;
-            float darknessThreshold;
+			float3 shapeOffset;
+			float3 detailOffset;
 
-            // Animation settings
-            float timeScale;
-            float baseSpeed;
-            float detailSpeed;
+			// Light settings
+			float lightAbsorptionTowardSun;
+			float lightAbsorptionThroughCloud;
+			float darknessThreshold;
+			float4 _LightColor0;
+			float3 dirToSun;
 
-            // Debug settings:
-            int debugViewMode; // 0 = off; 1 = shape tex; 2 = detail tex; 3 = weathermap
-            int debugGreyscale;
-            int debugShowAllChannels;
-            float debugNoiseSliceDepth;
-            float4 debugChannelWeight;
-            float debugTileAmount;
-            float viewerSize;
-            
-            float remap(float v, float minOld, float maxOld, float minNew, float maxNew) {
-                return minNew + (v-minOld) * (maxNew - minNew) / (maxOld-minOld);
-            }
+			float2 squareUV(float2 uv) {
+				float width = _ScreenParams.x;
+				float height = _ScreenParams.y;
+				float scale = 1000;
+				float x = uv.x * width;
+				float y = uv.y * height;
+				return float2 (x / scale, y / scale);
+			}
 
-            float2 squareUV(float2 uv) {
-                float width = _ScreenParams.x;
-                float height =_ScreenParams.y;
-                //float minDim = min(width, height);
-                float scale = 1000;
-                float x = uv.x * width;
-                float y = uv.y * height;
-                return float2 (x/scale, y/scale);
-            }
 
-            // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero
-            float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 invRaydir) {
-                // Adapted from: http://jcgt.org/published/0007/03/04/
-                float3 t0 = (boundsMin - rayOrigin) * invRaydir;
-                float3 t1 = (boundsMax - rayOrigin) * invRaydir;
-                float3 tmin = min(t0, t1);
-                float3 tmax = max(t0, t1);
-                
-                float dstA = max(max(tmin.x, tmin.y), tmin.z);
-                float dstB = min(tmax.x, min(tmax.y, tmax.z));
+			// Returns vector (dstToSphere, dstThroughSphere)
+			// If ray origin is inside sphere, dstToSphere = 0
+			// If ray misses sphere, dstToSphere = maxValue; dstThroughSphere = 0
+			float2 raySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir) {
+				float3 offset = rayOrigin - sphereCentre;
+				float a = 1; // Set to dot(rayDir, rayDir) if rayDir might not be normalized
+				float b = 2 * dot(offset, rayDir);
+				float c = dot(offset, offset) - sphereRadius * sphereRadius;
+				float d = b * b - 4 * a * c; // Discriminant from quadratic formula
 
-                // CASE 1: ray intersects box from outside (0 <= dstA <= dstB)
-                // dstA is dst to nearest intersection, dstB dst to far intersection
+				// Number of intersections: 0 when d < 0; 1 when d = 0; 2 when d > 0
+				if (d > 0) {
+					float s = sqrt(d);
+					float dstToSphereNear = max(0, (-b - s) / (2 * a));
+					float dstToSphereFar = (-b + s) / (2 * a);
 
-                // CASE 2: ray intersects box from inside (dstA < 0 < dstB)
-                // dstA is the dst to intersection behind the ray, dstB is dst to forward intersection
+					// Ignore intersections that occur behind the ray
+					if (dstToSphereFar >= 0) {
+						return float2(dstToSphereNear, dstToSphereFar - dstToSphereNear);
+					}
+				}
+				// Ray did not intersect sphere
+				static const float maxFloat = 3.402823466e+38;
+				return float2(maxFloat, 0);
+			}
 
-                // CASE 3: ray misses box (dstA > dstB)
+			// Returns (dstToShell, dstThroughShell)
+			// (Shell is defined by two spheres; the shell volume is the space between them)
+			float2 rayShellInfo(float3 rayPos, float3 rayDir) {
+				float2 innerSphereHitInfo = raySphere(0, innerShellRadius, rayPos, rayDir);
+				float2 outerSphereHitInfo = raySphere(0, outerShellRadius, rayPos, rayDir);
+				float dstToInnerSphere = innerSphereHitInfo.x;
+				float dstThroughInnerSphere = innerSphereHitInfo.y;
+				float dstToOuterSphere = outerSphereHitInfo.x;
+				float dstThroughOuterSphere = outerSphereHitInfo.y;
+				float dstFromCentre = length(rayPos - 0);
 
-                float dstToBox = max(0, dstA);
-                float dstInsideBox = max(0, dstB - dstToBox);
-                return float2(dstToBox, dstInsideBox);
-            }
+				float dstToShell = 0;
+				float dstThroughShell = 0;
 
-            // Henyey-Greenstein
-            float hg(float a, float g) {
-                float g2 = g*g;
-                return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
-            }
+				// View point is from outside the outer shell
+				if (dstFromCentre > outerShellRadius) {
+					dstToShell = dstToOuterSphere;
+					dstThroughShell = (dstThroughInnerSphere > 0) ? dstToInnerSphere - dstToOuterSphere : dstThroughOuterSphere;
+				}
+				// View point is inside the shell
+				else if (dstFromCentre > innerShellRadius) {
+					dstToShell = 0;
+					dstThroughShell = (dstThroughInnerSphere > 0) ? dstToInnerSphere : dstThroughOuterSphere;
+				}
+				// View point is inside the inner shell
+				else {
+					dstToShell = dstThroughInnerSphere;
+					dstThroughShell = dstThroughOuterSphere - dstThroughInnerSphere;
+				}
 
-            float phase(float a) {
-                float blend = .5;
-                float hgBlend = hg(a,phaseParams.x) * (1-blend) + hg(a,-phaseParams.y) * blend;
-                return phaseParams.z + hgBlend*phaseParams.w;
-            }
+				return float2(dstToShell, dstThroughShell);
+			}
 
-            float beer(float d) {
-                float beer = exp(-d);
-                return beer;
-            }
 
-            float remap01(float v, float low, float high) {
-                return (v-low)/(high-low);
-            }
 
-            float sampleDensity(float3 rayPos) {
-                // Constants:
-                const int mipLevel = 0;
-                const float baseScale = 1/1000.0;
-                const float offsetSpeed = 1/100.0;
+			// Henyey-Greenstein
+			float hg(float a, float g) {
+				float g2 = g * g;
+				return (1 - g2) / (4 * 3.1415 * pow(1 + g2 - 2 * g * (a), 1.5));
+			}
 
-                // Calculate texture sample positions
-                float time = _Time.x * timeScale;
-                float3 size = boundsMax - boundsMin;
-                float3 boundsCentre = (boundsMin+boundsMax) * .5;
-                float3 uvw = (size * .5 + rayPos) * baseScale * scale;
-                float3 shapeSamplePos = uvw + shapeOffset * offsetSpeed + float3(time,time*0.1,time*0.2) * baseSpeed;
+			float phase(float a) {
+				float blend = .5;
+				float hgBlend = hg(a,phaseParams.x) * (1 - blend) + hg(a,-phaseParams.y) * blend;
+				return phaseParams.z + hgBlend * phaseParams.w;
+			}
 
-                // Calculate falloff at along x/z edges of the cloud container
-                const float containerEdgeFadeDst = 50;
-                float dstFromEdgeX = min(containerEdgeFadeDst, min(rayPos.x - boundsMin.x, boundsMax.x - rayPos.x));
-                float dstFromEdgeZ = min(containerEdgeFadeDst, min(rayPos.z - boundsMin.z, boundsMax.z - rayPos.z));
-                float edgeWeight = min(dstFromEdgeZ,dstFromEdgeX)/containerEdgeFadeDst;
-                
-                //// Calculate height gradient from weather map
-                //float2 weatherUV = (size.xz * .5 + (rayPos.xz-boundsCentre.xz)) / max(size.x,size.z);
-                //float weatherMap = WeatherMap.SampleLevel(samplerWeatherMap, weatherUV, mipLevel).x;
-                //float gMin = remap(weatherMap.x,0,1,0.1,0.5);
-                //float gMax = remap(weatherMap.x,0,1,gMin,0.9);
-                //float heightPercent = (rayPos.y - boundsMin.y) / size.y;
-                //float heightGradient = saturate(remap(heightPercent, 0.0, gMin, 0, 1)) * saturate(remap(heightPercent, 1, gMax, 0, 1));
-                //heightGradient *= edgeWeight;
+			float beer(float d) {
+				float beer = exp(-d);
+				return beer;//
+			}
 
-                // Calculate base shape density
-                float4 shapeNoise = NoiseTex.SampleLevel(samplerNoiseTex, shapeSamplePos, mipLevel);
-                float4 normalizedShapeWeights = shapeNoiseWeights / dot(shapeNoiseWeights, 1);
-                float shapeFBM = dot(shapeNoise, normalizedShapeWeights);// *heightGradient;
-                float baseShapeDensity = shapeFBM + densityOffset * .1;
+			float remap(float v, float minOld, float maxOld, float minNew, float maxNew) {
+				return minNew + (v - minOld) * (maxNew - minNew) / (maxOld - minOld);
+			}
 
-                // Save sampling from detail tex if shape density <= 0
-                if (baseShapeDensity > 0) {
-                    // Sample detail noise
-                    float3 detailSamplePos = uvw*detailNoiseScale + detailOffset * offsetSpeed + float3(time*.4,-time,time*0.1)*detailSpeed;
-                    float4 detailNoise = DetailNoiseTex.SampleLevel(samplerDetailNoiseTex, detailSamplePos, mipLevel);
-                    float3 normalizedDetailWeights = detailWeights / dot(detailWeights, 1);
-                    float detailFBM = dot(detailNoise, normalizedDetailWeights);
+			float remap01(float v, float low, float high) {
+				return (v - low) / (high - low);
+			}
 
-                    // Subtract detail noise from base shape (weighted by inverse density so that edges get eroded more than centre)
-                    float oneMinusShape = 1 - shapeFBM;
-                    float detailErodeWeight = oneMinusShape * oneMinusShape * oneMinusShape;
-                    float cloudDensity = baseShapeDensity - (1-detailFBM) * detailErodeWeight * detailNoiseWeight;
-    
-                    return cloudDensity * densityMultiplier * 0.1;
-                }
-                return 0;
-            }
 
-            // Calculate proportion of light that reaches the given point from the lightsource
-            float lightmarch(float3 p) {
-                float3 dirToLight = _WorldSpaceLightPos0.xyz;
-                float dstInsideBox = rayBoxDst(boundsMin, boundsMax, p, 1/dirToLight).y;
-                
-                float transmittance = 1;
-                float stepSize = dstInsideBox/numStepsLight; // making this smaller helps improve perf
-                p += dirToLight * stepSize * .5;
-                float totalDensity = 0;
+			float sampleDensity(float3 rayPos) {
+				const int mipLevel = 0;
+				const float baseScale = 1 / 1000.0;
 
-                for (int step = 0; step < numStepsLight; step ++) {
-                    float density = sampleDensity(p);
-                    totalDensity += max(0, density * stepSize);
-                    p += dirToLight * stepSize;
-                }
+				float finalDensity = 0;
 
-                transmittance = beer(totalDensity*lightAbsorptionTowardSun);
+				float3 uvw = rayPos * baseScale * scale;
+				float3 shapeSamplePos = uvw + (shapeOffset + float3(_Time.x, 0, 0) * animSpeed) * 0.001;
 
-                float clampedTransmittance = darknessThreshold + transmittance * (1-darknessThreshold);
-                return clampedTransmittance;
-            }
+				float gMin = 0.2;
+				float gMax = 0.7;
+				float heightPercent = (length(rayPos) - innerShellRadius) / (outerShellRadius - innerShellRadius);
 
-            float4 debugDrawNoise(float2 uv) {
+				float heightGradient = saturate(heightPercent / gMin) * saturate((1 - heightPercent) / (1 - gMax));
 
-                float4 channels = 0;
-                float3 samplePos = float3(uv.x,uv.y, debugNoiseSliceDepth);
+				// Calculate base shape density
+				float4 shapeNoise = NoiseTex.SampleLevel(samplerNoiseTex, shapeSamplePos, mipLevel);
+				float4 normalizedShapeWeights = shapeNoiseWeights / dot(shapeNoiseWeights, 1);
+				float shapeFBM = dot(shapeNoise, normalizedShapeWeights) * heightGradient;
+				float baseShapeDensity = shapeFBM + densityOffset * 0.1;
 
-                if (debugViewMode == 1) {
-                    channels = NoiseTex.SampleLevel(samplerNoiseTex, samplePos, 0);
-                }
-                else if (debugViewMode == 2) {
-                    channels = DetailNoiseTex.SampleLevel(samplerDetailNoiseTex, samplePos, 0);
-                }
-                else if (debugViewMode == 3) {
-                    //channels = WeatherMap.SampleLevel(samplerWeatherMap, samplePos.xy, 0);
-                }
+				// Save sampling from detail tex if shape density <= 0
+				if (baseShapeDensity > 0) {
+					// Sample detail noise
+					float3 detailSamplePos = uvw * detailNoiseScale + detailOffset;
+					float4 detailNoise = DetailNoiseTex.SampleLevel(samplerDetailNoiseTex, detailSamplePos, mipLevel);
+					float3 normalizedDetailWeights = detailWeights / dot(detailWeights, 1);
+					float detailFBM = dot(detailNoise, normalizedDetailWeights);
+					//detailFBM = 1;
 
-                if (debugShowAllChannels) {
-                    return channels;
-                }
-                else {
-                    float4 maskedChannels = (channels*debugChannelWeight);
-                    if (debugGreyscale || debugChannelWeight.w == 1) {
-                        return dot(maskedChannels,1);
-                    }
-                    else {
-                        return maskedChannels;
-                    }
-                }
-            }
+					// Subtract detail noise from base shape (weighted by inverse density so that edges get eroded more than centre)
+					float oneMinusShape = 1 - shapeFBM;
+					float detailErodeWeight = oneMinusShape * oneMinusShape * oneMinusShape;
+					float cloudDensity = baseShapeDensity - (1 - detailFBM) * detailErodeWeight * detailNoiseWeight;
 
-          
-            float4 frag (v2f i) : SV_Target
-            {
-                #if DEBUG_MODE == 1
-                if (debugViewMode != 0) {
-                    float width = _ScreenParams.x;
-                    float height =_ScreenParams.y;
-                    float minDim = min(width, height);
-                    float x = i.uv.x * width;
-                    float y = (1-i.uv.y) * height;
+					finalDensity = cloudDensity * densityMultiplier * 0.1;
+				}
 
-                    if (x < minDim*viewerSize && y < minDim*viewerSize) {
-                        return debugDrawNoise(float2(x/(minDim*viewerSize)*debugTileAmount, y/(minDim*viewerSize)*debugTileAmount));
-                    }
-                }
-                #endif
-                
-                // Create ray
-                float3 rayPos = _WorldSpaceCameraPos;
-                float viewLength = length(i.viewVector);
-                float3 rayDir = i.viewVector / viewLength;
-                
-                // Depth and cloud container intersection info:
-                float nonlin_depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
-                float depth = LinearEyeDepth(nonlin_depth) * viewLength;
-                int cloudsStart = 100;
-                int cloudsEnd = 300;
-                float2 rayToContainerInfo = rayBoxDst(boundsMin, boundsMax, rayPos, 1/rayDir);
-                float dstToBox = rayToContainerInfo.x;
-                float dstInsideBox = rayToContainerInfo.y;
+				return finalDensity;
+			}
 
-                // point of intersection with the cloud container
-                float3 entryPoint = rayPos + rayDir * dstToBox;
-                
-                // Phase function makes clouds brighter around sun
-                float cosAngle = dot(rayDir, _WorldSpaceLightPos0.xyz);
-                float phaseVal = phase(cosAngle);
+			// Calculate proportion of light that reaches the given point from the lightsource
+			float lightmarch(float3 rayOrigin) {
 
-                float dstLimit = min(depth-dstToBox, dstInsideBox);
-                
-                // March through volume:
-                const float stepSize = 10;
-                float transmittance = 1;
-                float3 lightEnergy = 0;
+				float dstThroughShellToSun = raySphere(0, outerShellRadius, rayOrigin, dirToSun).y;
 
-                float dstTravelled = 0;
-                while (dstTravelled < dstLimit)
-                {
-                    rayPos = entryPoint + rayDir * dstTravelled;
-                    float density = sampleDensity(rayPos);
-                    
-                    if (density > 0)
-                    {
-                        float lightTransmittance = lightmarch(rayPos);
-                        lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
-                        transmittance *= exp(-density * stepSize * lightAbsorptionThroughCloud);
-                    
-                        // Early exit
-                        if (transmittance < 0.01) {
-                            break;
-                        }
-                    }
-                    
-                    dstTravelled += stepSize;
-                }
+				float stepSize = dstThroughShellToSun / numStepsLight;
+				float totalDensity = 0;
 
-                float3 backgroundCol = tex2D(_MainTex, i.uv);
+				for (int step = 0; step < numStepsLight; step++) {
+					rayOrigin += dirToSun * stepSize;
+					float density = sampleDensity(rayOrigin);
+					totalDensity += max(0, density);
+				}
 
-                // Sun
-                float focusedEyeCos = pow(saturate(cosAngle), params.x);
-                float sun = saturate(hg(focusedEyeCos, .9995)) * transmittance;
-                
-                // Add clouds
-                float3 LightColor = float3(1, 0.8, 0.7); // Replace this with color calculated by atmosphere
-                float3 cloudCol = lightEnergy * LightColor;
-                float3 col = backgroundCol * transmittance + cloudCol;
-                col = saturate(col) * (1-sun) + LightColor * sun;
+				float transmittance = exp(-totalDensity * stepSize * lightAbsorptionTowardSun);
+				return darknessThreshold + transmittance * (1 - darknessThreshold);
+			}
 
-                return float4(col, 0);
-            }
+			float4 march(float3 rayPos, float3 rayDir, float distance, float transmittance, float3 lightEnergy) {
+
+				float cosAngle = dot(rayDir, dirToSun);
+				float phaseVal = phase(cosAngle);
+
+				float dstLimit = distance;
+				float dstTravelled = 0;
+
+				float stepSize = (distance) / (numStepsMain - 1);
+				stepSize = max(minMainStepSize, stepSize);
+
+				while (dstTravelled < distance) {
+
+					float density = sampleDensity(rayPos);
+
+					if (density > 0) {
+						float lightTransmittance = lightmarch(rayPos);
+						lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
+						transmittance *= exp(-density * stepSize * lightAbsorptionThroughCloud);
+
+						// Exit early if T is close to zero as further samples won't affect the result much
+						if (transmittance < 0.01) {
+							break;
+						}
+					}
+					dstTravelled += stepSize;
+					rayPos += rayDir * stepSize;
+				}
+
+				return float4(lightEnergy, transmittance);
+			}
+
+
+			float4 frag(v2f i) : SV_Target
+			{
+				// Create ray
+				float3 camPos = _WorldSpaceCameraPos;
+				float viewLength = length(i.viewVector);
+				float3 rayDir = i.viewVector / viewLength;
+
+				// Depth and cloud container intersection info:
+				float nonlin_depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
+				float depth = LinearEyeDepth(nonlin_depth) * viewLength;
+
+				float2 shellHitinfo = rayShellInfo(camPos, rayDir);
+				float dstToShell = shellHitinfo.x;
+				float dstThroughShell = min(shellHitinfo.y, depth - dstToShell);
+
+				float4 originalCol = tex2D(_MainTex, i.uv);
+
+				if (dstThroughShell > 0) {
+					float3 shellEntryPoint = camPos + rayDir * dstToShell;
+
+					float transmittance = 1;
+					float3 lightEnergy = 0;
+
+					// March through near section of shell
+					float4 lightInfo = march(shellEntryPoint, rayDir, dstThroughShell, transmittance, lightEnergy);
+					lightEnergy = lightInfo.xyz;
+					transmittance = lightInfo.w;
+
+					// March through far section of shell
+					float3 rayExitPoint = shellEntryPoint + rayDir * (dstThroughShell + 0.1);
+					shellHitinfo = rayShellInfo(rayExitPoint, rayDir);
+					dstToShell = shellHitinfo.x;
+					dstThroughShell = min(shellHitinfo.y, depth - length(camPos - rayExitPoint) - dstToShell);
+
+					if (dstThroughShell > 0) {
+						shellEntryPoint = rayExitPoint + rayDir * dstToShell;
+						lightInfo = march(shellEntryPoint, rayDir, dstThroughShell, transmittance, lightEnergy);
+						lightEnergy = lightInfo.xyz;
+						transmittance = lightInfo.w;
+					}
+
+					// Add clouds to background
+					float lightIntensity = 1.25; // Todo: get from light (not using _LightPos because glitches when instantiating point lights)
+					float3 cloudCol = lightEnergy * lightIntensity;
+					return originalCol + float4(cloudCol, transmittance);
+				}
+				return originalCol;
+			}
             ENDCG
         }
     }

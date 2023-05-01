@@ -3,19 +3,20 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Clouds")]
 public class CloudsSettings : ScriptableObject
 {
-    const string headerDecoration = " --- ";
-    [Header(headerDecoration + "Main" + headerDecoration)]
+    [Header("Main")]
     public Shader shader;
-    public int width;
-    public int height;
-    public int depth;
+    public float innerShellRadius = 400;
+    public float outerShellRadius = 500;
+    public float animSpeed;
     public Vector3 cloudTestParams;
 
-    [Header("March settings" + headerDecoration)]
+    [Header("March settings")]
+    public float minMainStepSize = 0;
+    public int numStepsMain = 5;
     public int numStepsLight = 8;
     public float rayOffsetStrength;
 
-    [Header(headerDecoration + "Base Shape" + headerDecoration)]
+    [Header("Base Shape")]
     public float cloudScale = 1;
     public float densityMultiplier = 1;
     public float densityOffset;
@@ -23,14 +24,14 @@ public class CloudsSettings : ScriptableObject
     public Vector2 heightOffset;
     public Vector4 shapeNoiseWeights;
 
-    [Header(headerDecoration + "Detail" + headerDecoration)]
+    [Header("Detail")]
     public float detailNoiseScale = 10;
     public float detailNoiseWeight = .1f;
     public Vector3 detailNoiseWeights;
     public Vector3 detailOffset;
 
 
-    [Header(headerDecoration + "Lighting" + headerDecoration)]
+    [Header("Lighting")]
     public float lightAbsorptionThroughCloud = 1;
     public float lightAbsorptionTowardSun = 1;
     [Range(0, 1)]
@@ -43,11 +44,6 @@ public class CloudsSettings : ScriptableObject
     public float baseBrightness = .8f;
     [Range(0, 1)]
     public float phaseFactor = .15f;
-
-    [Header(headerDecoration + "Animation" + headerDecoration)]
-    public float timeScale = 1;
-    public float baseSpeed = 1;
-    public float detailSpeed = 2;
 
     [Header("Noise")]
     public Texture3D shapeTexture;
@@ -77,6 +73,9 @@ public class CloudsSettings : ScriptableObject
             material.SetTexture("NoiseTex", _shapeTexture);
             material.SetTexture("DetailNoiseTex", _detailTexture);
 
+            material.SetTexture("NoiseTex", shapeTexture);
+            material.SetTexture("DetailNoiseTex", detailTexture);
+
             material.SetFloat("scale", cloudScale);
             material.SetFloat("densityMultiplier", densityMultiplier);
             material.SetFloat("densityOffset", densityOffset);
@@ -94,17 +93,14 @@ public class CloudsSettings : ScriptableObject
             material.SetVector("shapeNoiseWeights", shapeNoiseWeights);
             material.SetVector("phaseParams", new Vector4(forwardScattering, backScattering, baseBrightness, phaseFactor));
 
-            var containerVolume = new Vector3(width, height, depth);
-            material.SetVector("boundsMin", -containerVolume / 2);
-            material.SetVector("boundsMax", containerVolume / 2);
+            material.SetFloat("innerShellRadius", innerShellRadius);
+            material.SetFloat("outerShellRadius", outerShellRadius);
+            material.SetFloat("animSpeed", animSpeed);
 
+            material.SetFloat("minMainStepSize", minMainStepSize);
             material.SetInt("numStepsLight", numStepsLight);
-
-            material.SetVector("mapSize", new Vector4(width, height, depth, 0));
-
-            material.SetFloat("timeScale", (Application.isPlaying) ? timeScale : 0);
-            material.SetFloat("baseSpeed", baseSpeed);
-            material.SetFloat("detailSpeed", detailSpeed);
+            material.SetInt("numStepsMain", numStepsMain);
+            material.SetVector("dirToSun", directionToSun);
 
             // Set debug params
             SetDebugParams(material);
