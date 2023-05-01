@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 4619102}
   - component: {fileID: 4619101}
   - component: {fileID: 4619100}
-  - component: {fileID: 4619103}
   - component: {fileID: 4619104}
   m_Layer: 0
   m_Name: Main Camera
@@ -217,44 +216,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 28.562, y: 0, z: 0}
---- !u!114 &4619103
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4619099}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 07a0573c03ac54441823ca2219f520d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  shader: {fileID: 4800000, guid: b63adce98e96243ecab49118e161e630, type: 3}
-  container: {fileID: 822266484}
-  cloudTestParams: {x: 0.9, y: 7.29, z: 0.64}
-  numStepsLight: 4
-  rayOffsetStrength: 9.19
-  cloudScale: 0.4
-  densityMultiplier: 0.82
-  densityOffset: -3.64
-  shapeOffset: {x: 29.4, y: -47.87, z: 1.11}
-  heightOffset: {x: 0, y: 0}
-  shapeNoiseWeights: {x: 2.51, y: 0.89, z: 1.37, w: 0.57}
-  detailNoiseScale: 4
-  detailNoiseWeight: 1.5
-  detailNoiseWeights: {x: 2.57, y: 0.89, z: 1.37}
-  detailOffset: {x: 130.23, y: 0, z: 0}
-  lightAbsorptionThroughCloud: 1.05
-  lightAbsorptionTowardSun: 1.6
-  darknessThreshold: 0.28
-  forwardScattering: 0.72
-  backScattering: 0.33
-  baseBrightness: 1
-  phaseFactor: 0.83
-  timeScale: 1
-  baseSpeed: 0.5
-  detailSpeed: 1
-  material: {fileID: 748811380}
 --- !u!114 &4619104
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -353,7 +314,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &688755335
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -395,7 +356,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 24eac02194fabb34aa21b828ac122f1f, type: 2}
+  - {fileID: 2100000, guid: c537309ca88c5ca49bb71ed62ee5011f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -440,37 +401,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!21 &748811380
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden/Clouds
-  m_Shader: {fileID: 4800000, guid: b63adce98e96243ecab49118e161e630, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors: []
-  m_BuildTextureStacks: []
 --- !u!1 &822266483
 GameObject:
   m_ObjectHideFlags: 0

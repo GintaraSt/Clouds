@@ -66,14 +66,14 @@ public class CloudsSettings : ScriptableObject
 
     public void SetProperties(Material material, Vector3 directionToSun)
     {
-        //if (!settingsUpToDate || Application.isEditor)
-        //{
+        if (!settingsUpToDate || Application.isEditor)
+        {
             // Validate inputs
             numStepsLight = Mathf.Max(1, numStepsLight);
 
             // Noise
-            CreateTexture(ref _shapeTexture, 1, shapeTexture);
-            CreateTexture(ref _detailTexture, 1, detailTexture);
+            CreateTexture(ref _shapeTexture, 64, shapeTexture);
+            CreateTexture(ref _detailTexture, 64, detailTexture);
             material.SetTexture("NoiseTex", _shapeTexture);
             material.SetTexture("DetailNoiseTex", _detailTexture);
 
@@ -118,7 +118,7 @@ public class CloudsSettings : ScriptableObject
             SetDebugParams(material);
 
             settingsUpToDate = true;
-        //}
+        }
     }
 
     void CreateTexture(ref RenderTexture texture, int resolution, Texture3D source)
