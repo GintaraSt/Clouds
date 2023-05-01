@@ -5,7 +5,10 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
+  - enabled: 0
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 1
-    path: Assets/Flight Demo.unity
-    guid: 20dddf1c73edf8b43a45ac49c16cb892
+    path: Assets/SecondSetup.unity
+    guid: 34dedbc0f6d71bf4fbe218e4bcef2346
   m_configObjects: {}

@@ -53,78 +53,78 @@ public class CloudMaster : MonoBehaviour {
     public Material material;
 
     void Awake () {
-        var weatherMapGen = FindObjectOfType<WeatherMap> ();
-        if (Application.isPlaying) {
-            weatherMapGen.UpdateMap ();
-        }
+        //var weatherMapGen = FindObjectOfType<WeatherMap> ();
+        //if (Application.isPlaying) {
+        //    weatherMapGen.UpdateMap ();
+        //}
     }
 
-    [ImageEffectOpaque]
-    private void OnRenderImage (RenderTexture src, RenderTexture dest) {
+    //[ImageEffectOpaque]
+    //private void OnRenderImage (RenderTexture src, RenderTexture dest) {
 
-        // Validate inputs
-        if (material == null || material.shader != shader) {
-            material = new Material (shader);
-        }
-        numStepsLight = Mathf.Max (1, numStepsLight);
+    //    // Validate inputs
+    //    if (material == null || material.shader != shader) {
+    //        material = new Material (shader);
+    //    }
+    //    numStepsLight = Mathf.Max (1, numStepsLight);
 
-        // Noise
-        var noise = FindObjectOfType<NoiseGenerator> ();
-        noise.UpdateNoise ();
+    //    // Noise
+    //    var noise = FindObjectOfType<NoiseGenerator> ();
+    //    noise.UpdateNoise ();
 
-        material.SetTexture ("NoiseTex", noise.shapeTexture);
-        material.SetTexture ("DetailNoiseTex", noise.detailTexture);
+    //    material.SetTexture ("NoiseTex", noise.shapeTexture);
+    //    material.SetTexture ("DetailNoiseTex", noise.detailTexture);
 
-        // Weathermap
-        var weatherMapGen = FindObjectOfType<WeatherMap> ();
-        if (!Application.isPlaying) {
-            weatherMapGen.UpdateMap ();
-        }
-        material.SetTexture ("WeatherMap", weatherMapGen.weatherMap);
+    //    // Weathermap
+    //    var weatherMapGen = FindObjectOfType<WeatherMap> ();
+    //    if (!Application.isPlaying) {
+    //        weatherMapGen.UpdateMap ();
+    //    }
+    //    material.SetTexture ("WeatherMap", weatherMapGen.weatherMap);
 
-        Vector3 size = container.localScale;
-        int width = Mathf.CeilToInt (size.x);
-        int height = Mathf.CeilToInt (size.y);
-        int depth = Mathf.CeilToInt (size.z);
+    //    Vector3 size = container.localScale;
+    //    int width = Mathf.CeilToInt (size.x);
+    //    int height = Mathf.CeilToInt (size.y);
+    //    int depth = Mathf.CeilToInt (size.z);
 
-        material.SetFloat ("scale", cloudScale);
-        material.SetFloat ("densityMultiplier", densityMultiplier);
-        material.SetFloat ("densityOffset", densityOffset);
-        material.SetFloat ("lightAbsorptionThroughCloud", lightAbsorptionThroughCloud);
-        material.SetFloat ("lightAbsorptionTowardSun", lightAbsorptionTowardSun);
-        material.SetFloat ("darknessThreshold", darknessThreshold);
-        material.SetVector ("params", cloudTestParams);
-        material.SetFloat ("rayOffsetStrength", rayOffsetStrength);
+    //    material.SetFloat ("scale", cloudScale);
+    //    material.SetFloat ("densityMultiplier", densityMultiplier);
+    //    material.SetFloat ("densityOffset", densityOffset);
+    //    material.SetFloat ("lightAbsorptionThroughCloud", lightAbsorptionThroughCloud);
+    //    material.SetFloat ("lightAbsorptionTowardSun", lightAbsorptionTowardSun);
+    //    material.SetFloat ("darknessThreshold", darknessThreshold);
+    //    material.SetVector ("params", cloudTestParams);
+    //    material.SetFloat ("rayOffsetStrength", rayOffsetStrength);
 
-        material.SetFloat ("detailNoiseScale", detailNoiseScale);
-        material.SetFloat ("detailNoiseWeight", detailNoiseWeight);
-        material.SetVector ("shapeOffset", shapeOffset);
-        material.SetVector ("detailOffset", detailOffset);
-        material.SetVector ("detailWeights", detailNoiseWeights);
-        material.SetVector ("shapeNoiseWeights", shapeNoiseWeights);
-        material.SetVector ("phaseParams", new Vector4 (forwardScattering, backScattering, baseBrightness, phaseFactor));
+    //    material.SetFloat ("detailNoiseScale", detailNoiseScale);
+    //    material.SetFloat ("detailNoiseWeight", detailNoiseWeight);
+    //    material.SetVector ("shapeOffset", shapeOffset);
+    //    material.SetVector ("detailOffset", detailOffset);
+    //    material.SetVector ("detailWeights", detailNoiseWeights);
+    //    material.SetVector ("shapeNoiseWeights", shapeNoiseWeights);
+    //    material.SetVector ("phaseParams", new Vector4 (forwardScattering, backScattering, baseBrightness, phaseFactor));
 
-        material.SetVector ("boundsMin", container.position - container.localScale / 2);
-        material.SetVector ("boundsMax", container.position + container.localScale / 2);
+    //    material.SetVector ("boundsMin", container.position - container.localScale / 2);
+    //    material.SetVector ("boundsMax", container.position + container.localScale / 2);
 
-        material.SetInt ("numStepsLight", numStepsLight);
+    //    material.SetInt ("numStepsLight", numStepsLight);
 
-        material.SetVector ("mapSize", new Vector4 (width, height, depth, 0));
+    //    material.SetVector ("mapSize", new Vector4 (width, height, depth, 0));
 
-        material.SetFloat ("timeScale", (Application.isPlaying) ? timeScale : 0);
-        material.SetFloat ("baseSpeed", baseSpeed);
-        material.SetFloat ("detailSpeed", detailSpeed);
+    //    material.SetFloat ("timeScale", (Application.isPlaying) ? timeScale : 0);
+    //    material.SetFloat ("baseSpeed", baseSpeed);
+    //    material.SetFloat ("detailSpeed", detailSpeed);
 
-        // Set debug params
-        SetDebugParams ();
+    //    // Set debug params
+    //    SetDebugParams ();
 
-        // Bit does the following:
-        // - sets _MainTex property on material to the source texture
-        // - sets the render target to the destination texture
-        // - draws a full-screen quad
-        // This copies the src texture to the dest texture, with whatever modifications the shader makes
-        Graphics.Blit (src, dest, material);
-    }
+    //    // Bit does the following:
+    //    // - sets _MainTex property on material to the source texture
+    //    // - sets the render target to the destination texture
+    //    // - draws a full-screen quad
+    //    // This copies the src texture to the dest texture, with whatever modifications the shader makes
+    //    Graphics.Blit (src, dest, material);
+    //}
 
     void SetDebugParams () {
 

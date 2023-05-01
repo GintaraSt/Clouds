@@ -1,3 +1,6 @@
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
 Shader "Hidden/Clouds"
 {
@@ -12,6 +15,8 @@ Shader "Hidden/Clouds"
         // No culling or depth
         Cull Off ZWrite Off ZTest Always
 
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
+
         Pass
         {
             CGPROGRAM
@@ -22,37 +27,40 @@ Shader "Hidden/Clouds"
             #include "UnityCG.cginc"
             #include "Assets/Scripts/Shaders/CloudDebug.cginc"
 
-            // vertex input: position, UV
             struct appdata {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
+                    float4 position : POSITION;
+                    float4 uv : TEXCOORD0;
             };
 
             struct v2f {
-                float4 pos : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 viewVector : TEXCOORD1;
+                    float4 pos : SV_POSITION;
+                    float2 uv : TEXCOORD0;
+                    float3 viewVector : TEXCOORD1;
+                    float4 worldSpacePos : TEXCOORD2;
             };
-            
-            v2f vert (appdata v) {
-                v2f output;
-                output.pos = UnityObjectToClipPos(v.vertex);
-                output.uv = v.uv;
-                // Camera space matches OpenGL convention where cam forward is -z. In unity forward is positive z.
-                // (https://docs.unity3d.com/ScriptReference/Camera-cameraToWorldMatrix.html)
-                float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv * 2 - 1, 0, -1));
-                output.viewVector = mul(unity_CameraToWorld, float4(viewVector,0));
-                return output;
+
+            v2f vert(appdata v) {
+                    v2f output;
+                    output.pos = UnityObjectToClipPos(v.position);
+                    output.uv = v.uv;
+                    // Camera space matches OpenGL convention where cam forward is -z. In unity forward is positive z.
+                    // (https://docs.unity3d.com/ScriptReference/Camera-cameraToWorldMatrix.html)
+                    float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv.xy * 2 - 1, 0, -1));
+                    output.viewVector = mul(unity_CameraToWorld, float4(viewVector,0));
+
+                    // world position of vertex
+                    output.worldSpacePos = mul(unity_ObjectToWorld, v.position);
+                    return output;
             }
 
             // Textures
             Texture3D<float4> NoiseTex;
             Texture3D<float4> DetailNoiseTex;
-            Texture2D<float4> WeatherMap;
+            //Texture2D<float4> WeatherMap;
             
             SamplerState samplerNoiseTex;
             SamplerState samplerDetailNoiseTex;
-            SamplerState samplerWeatherMap;
+            //SamplerState samplerWeatherMap;
 
             sampler2D _MainTex;
             sampler2D _CameraDepthTexture;
@@ -176,19 +184,19 @@ Shader "Hidden/Clouds"
                 float dstFromEdgeZ = min(containerEdgeFadeDst, min(rayPos.z - boundsMin.z, boundsMax.z - rayPos.z));
                 float edgeWeight = min(dstFromEdgeZ,dstFromEdgeX)/containerEdgeFadeDst;
                 
-                // Calculate height gradient from weather map
-                float2 weatherUV = (size.xz * .5 + (rayPos.xz-boundsCentre.xz)) / max(size.x,size.z);
-                float weatherMap = WeatherMap.SampleLevel(samplerWeatherMap, weatherUV, mipLevel).x;
-                float gMin = remap(weatherMap.x,0,1,0.1,0.5);
-                float gMax = remap(weatherMap.x,0,1,gMin,0.9);
-                float heightPercent = (rayPos.y - boundsMin.y) / size.y;
-                float heightGradient = saturate(remap(heightPercent, 0.0, gMin, 0, 1)) * saturate(remap(heightPercent, 1, gMax, 0, 1));
-                heightGradient *= edgeWeight;
+                //// Calculate height gradient from weather map
+                //float2 weatherUV = (size.xz * .5 + (rayPos.xz-boundsCentre.xz)) / max(size.x,size.z);
+                //float weatherMap = WeatherMap.SampleLevel(samplerWeatherMap, weatherUV, mipLevel).x;
+                //float gMin = remap(weatherMap.x,0,1,0.1,0.5);
+                //float gMax = remap(weatherMap.x,0,1,gMin,0.9);
+                //float heightPercent = (rayPos.y - boundsMin.y) / size.y;
+                //float heightGradient = saturate(remap(heightPercent, 0.0, gMin, 0, 1)) * saturate(remap(heightPercent, 1, gMax, 0, 1));
+                //heightGradient *= edgeWeight;
 
                 // Calculate base shape density
                 float4 shapeNoise = NoiseTex.SampleLevel(samplerNoiseTex, shapeSamplePos, mipLevel);
                 float4 normalizedShapeWeights = shapeNoiseWeights / dot(shapeNoiseWeights, 1);
-                float shapeFBM = dot(shapeNoise, normalizedShapeWeights) * heightGradient;
+                float shapeFBM = dot(shapeNoise, normalizedShapeWeights);// *heightGradient;
                 float baseShapeDensity = shapeFBM + densityOffset * .1;
 
                 // Save sampling from detail tex if shape density <= 0
@@ -243,7 +251,7 @@ Shader "Hidden/Clouds"
                     channels = DetailNoiseTex.SampleLevel(samplerDetailNoiseTex, samplePos, 0);
                 }
                 else if (debugViewMode == 3) {
-                    channels = WeatherMap.SampleLevel(samplerWeatherMap, samplePos.xy, 0);
+                    //channels = WeatherMap.SampleLevel(samplerWeatherMap, samplePos.xy, 0);
                 }
 
                 if (debugShowAllChannels) {
@@ -301,7 +309,7 @@ Shader "Hidden/Clouds"
                 float dstLimit = min(depth-dstToBox, dstInsideBox);
                 
                 // March through volume:
-                const float stepSize = 20;
+                const float stepSize = 10;
                 float transmittance = 1;
                 float3 lightEnergy = 0;
 
@@ -326,7 +334,7 @@ Shader "Hidden/Clouds"
                     dstTravelled += stepSize;
                 }
 
-                float3 backgroundCol = tex2D(_MainTex,i.uv);
+                float3 backgroundCol = tex2D(_MainTex, i.uv);
 
                 // Sun
                 float focusedEyeCos = pow(saturate(cosAngle), params.x);
@@ -337,7 +345,11 @@ Shader "Hidden/Clouds"
                 float3 cloudCol = lightEnergy * LightColor;
                 float3 col = backgroundCol * transmittance + cloudCol;
                 col = saturate(col) * (1-sun) + LightColor * sun;
-                return float4(col,0);
+
+                //return float4(backgroundCol, 0) * float4(1, 0.8, 0.8, 0);
+                return float4(col, 0);
+
+                //return tex2D(_MainTex, i.uv);
             }
             ENDCG
         }
