@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: CloudsSettings
   m_EditorClassIdentifier: 
   shader: {fileID: 4800000, guid: b63adce98e96243ecab49118e161e630, type: 3}
-  width: 5000
-  height: 250
-  depth: 5000
+  innerShellRadius: 1400
+  outerShellRadius: 1600
+  animSpeed: 1000
   cloudTestParams: {x: 0.9, y: 7.29, z: 0.64}
-  numStepsLight: 4
+  minMainStepSize: 5
+  numStepsMain: 20
+  numStepsLight: 10
   rayOffsetStrength: 9.19
   cloudScale: 0.4
   densityMultiplier: 0.82
@@ -36,9 +38,6 @@ MonoBehaviour:
   backScattering: 0.33
   baseBrightness: 1
   phaseFactor: 0.83
-  timeScale: 1
-  baseSpeed: 0.5
-  detailSpeed: 1
   shapeTexture: {fileID: 11700000, guid: 7347e527a16cd484a979f69ad68c2fe4, type: 2}
   detailTexture: {fileID: 11700000, guid: 15a6e34f000c61242a5a294eb278f9f0, type: 2}
   copyShader: {fileID: 7200000, guid: 7abd06564e4244f60857856659a3809f, type: 3}
